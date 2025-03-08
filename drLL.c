@@ -124,44 +124,53 @@ void MatchSymbol (int expected_token)
 											/// The actual recomendation is to use MatchSymbol in the code rather than theese macros
 
 
-
+											
+/*
+Axioma -> Expresion '\n'
+*/
 
 void ParseAxiom()
-{									/// Axiom ::= Expresion\n
-	char* result = ParseExpression() ;			/// Dummy Parser. Complete this with your design	
-	if (tokens.token == '\n' || tokens.token == EOF) {	/// We can also use
-		MatchSymbol ('\n') ;
-		printf ("%s\n", result) ;
-		free(result); 
-	} else { 
-		rd_syntax_error (-1, tokens.token, "-- Unexpected Token (Expected:%d=None, Read:%d) at end of Parsing\n") ;
-	}
+{									
+	char* result = ParseExpression() ;	
+	if (tokens.token == '\n' || tokens.token == EOF) {
+        printf("%s\n", result);
+        free(result);
+        rd_lex(); 
+    } else {
+        rd_syntax_error('\n', tokens.token, "token %d expected, but %d was read");
+    }
 }
 
-char* ParseExpression() 
+/*
+Expresion -> (Expresion’ | Numero | Variable
+*/
+char* ParseExpression()
 {
-	char* result = malloc(100);
-	if (!result) {
-		fprintf(stderr, "Error allocating memory\n");
-		exit(1);
-	}
-
-	if (tokens.token == T_NUMBER) {
-		sprintf(result, "%d", tokens.number);
-	} else if (tokens.token == T_VARIABLE) {
-		sprintf(result, "%s", tokens.variable_name);
-	} else if (tokens.token == '(') {
-		ParseLParen();
-		rd_lex();
-		char* expr_result = ParseExpressionRest();
-		strcpy(result, expr_result);
-		free(expr_result);
-	} else {
-		rd_syntax_error('(', tokens.token, "token %d expected, but %d was read");
-	}
-	return result;
+    char* result = malloc(100);
+    if (!result) {
+        fprintf(stderr, "Error allocating memory\n");
+        exit(1);
+    }
+    if (tokens.token == T_NUMBER) {
+        sprintf(result, "%d", tokens.number);
+        rd_lex();
+    } else if (tokens.token == T_VARIABLE) {
+        sprintf(result, "%s", tokens.variable_name);
+        rd_lex();
+    } else if (tokens.token == '(') {
+        ParseLParen();
+        char* expr_result = ParseExpressionRest();
+        strcpy(result, expr_result);
+        free(expr_result);
+    } else {
+        rd_syntax_error('(', tokens.token, "token %d expected, but %d was read");
+    }
+    return result;
 }
 
+/*
+Expresion’ -> Operador Expresion Expresion) | = Variable Expresion) 
+*/
 char* ParseExpressionRest()
 {
 	char* result = malloc(100);
@@ -170,17 +179,15 @@ char* ParseExpressionRest()
 		exit(1);
 	}
 	if (tokens.token == T_OPERATOR) {
-		char operator = tokens.token_val;
-		rd_lex();
-		char* param1 = ParseExpression();
-		rd_lex();
-		char* param2 = ParseExpression();
-		rd_lex();
-		sprintf(result, "%s%c%s ", param1, operator, param2);
-		free(param1);
-		free(param2);
-		ParseRParen();
-	} else if (tokens.token == '=') {
+        char operator = tokens.token_val;
+        rd_lex();
+        char* param1 = ParseExpression();
+        char* param2 = ParseExpression();
+        sprintf(result, "(%s %c %s)", param1, operator, param2);
+        free(param1);
+        free(param2);
+        ParseRParen();
+    } else if (tokens.token == '=') {
 		rd_lex();
 		if (tokens.token != T_VARIABLE) {
 			rd_syntax_error(T_VARIABLE, tokens.token, "token %d expected, but %d was read");
@@ -189,7 +196,7 @@ char* ParseExpressionRest()
 		strcpy(variable, tokens.variable_name);
 		rd_lex();
 		char* param1 = ParseExpression();
-		sprintf(result, "%s = %s", variable, param1);
+		sprintf(result, "(%s = %s)", variable, param1);
 		free(param1);
 		ParseRParen();
 	} else {
@@ -197,7 +204,6 @@ char* ParseExpressionRest()
 	}
 	return result;
 }
-
 
 
 
